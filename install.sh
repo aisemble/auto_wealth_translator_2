@@ -10,106 +10,89 @@ handle_error() {
     exit 1
 }
 
-# Function to check if a command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
-
-# Function to verify Python package installation
-verify_python_package() {
-    python3 -c "import $1" 2>/dev/null
-    return $?
-}
-
 trap 'handle_error $LINENO "$BASH_COMMAND"' ERR
 
-# Check for required commands
-echo "Checking system requirements..."
-for cmd in python3 pip3 brew; do
-    if ! command_exists "$cmd"; then
-        echo "Error: $cmd is not installed or not in PATH"
-        if [ "$cmd" = "brew" ]; then
-            echo "Please install Homebrew first:"
-            echo "/bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
-        fi
-        exit 1
-    fi
-done
+# Create and activate virtual environment
+echo "Creating Python virtual environment..."
+python3 -m venv venv
+source venv/bin/activate || {
+    echo "Failed to create/activate virtual environment"
+    exit 1
+}
 
-# Update Homebrew
-echo "Updating Homebrew..."
-for i in {1..3}; do
-    if brew update; then
-        break
-    fi
-    if [ $i -eq 3 ]; then
-        echo "Failed to update Homebrew after 3 attempts"
-        exit 1
-    fi
-    echo "Retrying Homebrew update..."
-    sleep 5
-done
+# Upgrade pip to latest version
+echo "Upgrading pip..."
+python -m pip install --upgrade pip || {
+    echo "Failed to upgrade pip"
+    exit 1
+}
 
-# Install system dependencies with better error handling
+# Update package lists
+echo "Updating package lists..."
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    # macOS specific commands
+    brew update || {
+        echo "Failed to update Homebrew"
+        exit 1
+    }
+else
+    # Linux specific commands
+    sudo apt-get update || {
+        echo "Failed to update package lists"
+        exit 1
+    }
+fi
+
+# Install system dependencies
 echo "Installing system dependencies..."
 while read -r package; do
     if [ -n "$package" ] && [[ ! "$package" =~ ^# ]]; then
         echo "Installing $package..."
-        for i in {1..3}; do
-            if brew install "$package"; then
-                break
-            fi
-            if [ $i -eq 3 ]; then
-                echo "Failed to install $package after 3 attempts"
-                echo "Continuing with other packages..."
-            fi
-            echo "Retrying installation of $package..."
-            sleep 5
-        done
+        if [[ "$OSTYPE" == "darwin"* ]]; then
+            brew install "$package" || {
+                echo "Failed to install $package, trying to continue..."
+            }
+        else
+            sudo apt-get install -y "$package" || {
+                echo "Failed to install $package, trying to continue..."
+            }
+        fi
     fi
 done < packages.txt
 
-# Create and activate virtual environment
-echo "Creating virtual environment..."
-python3 -m venv venv
-source venv/bin/activate
-
-# Upgrade pip with retry
-echo "Upgrading pip..."
-for i in {1..3}; do
-    if pip install --upgrade pip; then
-        break
-    fi
-    if [ $i -eq 3 ]; then
-        echo "Failed to upgrade pip after 3 attempts"
-        exit 1
-    fi
-    echo "Retrying pip upgrade..."
-    sleep 5
-done
-
-# Install Python dependencies with retry
+# Install Python dependencies with specific versions
 echo "Installing Python dependencies..."
-for i in {1..3}; do
-    if pip install -r requirements-streamlit.txt; then
-        break
-    fi
-    if [ $i -eq 3 ]; then
-        echo "Failed to install Python dependencies after 3 attempts"
-        exit 1
-    fi
-    echo "Retrying Python dependencies installation..."
-    sleep 5
-done
+# First uninstall potentially conflicting packages
+pip uninstall -y fitz pymupdf || true
 
-# Verify critical package installations
+# Install core dependencies first
+pip install wheel setuptools || {
+    echo "Failed to install core dependencies"
+    exit 1
+}
+
+# Install PyMuPDF and its dependencies with specific versions
+pip install "PyMuPDF==1.23.3" || {
+    echo "Failed to install PyMuPDF"
+    exit 1
+}
+
+pip install -r requirements-streamlit.txt || {
+    echo "Failed to install remaining Python dependencies"
+    exit 1
+}
+
+# Verify installation
 echo "Verifying installation..."
-for package in fitz PIL streamlit; do
-    if ! verify_python_package "$package"; then
-        echo "Error: Failed to verify $package installation"
-        exit 1
-    fi
-done
+python -c "import pymupdf; import PIL; import streamlit" || {
+    echo "Failed to verify installation. Try importing packages individually to identify the problem:"
+    echo "Testing PyMuPDF..."
+    python -c "import pymupdf" || echo "PyMuPDF import failed"
+    echo "Testing Pillow..."
+    python -c "import PIL" || echo "Pillow import failed"
+    echo "Testing Streamlit..."
+    python -c "import streamlit" || echo "Streamlit import failed"
+    exit 1
+}
 
-echo "Installation completed successfully!"
-echo "To activate the virtual environment, run: source venv/bin/activate" 
+echo "Installation completed successfully!" 

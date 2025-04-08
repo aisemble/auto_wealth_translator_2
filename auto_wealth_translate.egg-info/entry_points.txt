@@ -1,0 +1,2 @@
+[console_scripts]
+auto-wealth-translate = auto_wealth_translate.cli:main

@@ -55,11 +55,12 @@ api_key = "your-xai-api-key"
 
 AutoWealthTranslate relies on several system dependencies that are installed automatically via the `packages.txt` file:
 
-- **PDF processing**: zlib, libjpeg, libopenjp2, poppler-utils
+- **PDF processing**: zlib, libjpeg, libopenjp2, poppler-utils, mupdf, mupdf-tools
 - **Image processing**: libwebp, libtiff
 - **Text rendering**: libharfbuzz, libfribidi, libpango
 - **OCR**: tesseract-ocr
 - **UI**: libcairo2, libpango, libgdk-pixbuf
+- **Build tools**: build-essential, swig, python3-dev
 
 If you need to add custom system dependencies, you can modify the `packages.txt` file.
 
@@ -85,9 +86,10 @@ For larger documents or more complex processing, you may need to adjust the app 
 If you encounter issues during deployment:
 
 1. **Build errors for Python packages**: 
-   - Check the app logs for specific error messages
-   - We've pinned PyMuPDF and Pillow to specific versions with pre-built wheels
-   - If you still have issues, you may need to add additional system dependencies to `packages.txt`
+   - We use PyMuPDF 1.23.3 which has pre-built wheels for Python 3.9-3.12
+   - For Python 3.12 specifically, earlier versions of PyMuPDF won't work
+   - If you encounter build errors, check the system dependencies in `packages.txt`
+   - MuPDF packages (mupdf, mupdf-tools) and swig are required for PyMuPDF
 
 2. **Missing system dependencies**:
    - If you see errors about missing libraries, add them to `packages.txt`

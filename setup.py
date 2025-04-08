@@ -11,7 +11,7 @@ setup(
         "PyPDF2>=3.0.0",
         "python-magic>=0.4.24",
         "python-magic-bin>=0.4.14; sys_platform == 'win32'",
-        "PyMuPDF==1.21.1",
+        "PyMuPDF==1.23.3",
         "pdfplumber>=0.7.0,<0.8.0",
         "pdf2image>=1.16.0",
         "reportlab>=3.6.0",

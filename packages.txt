@@ -22,4 +22,11 @@ libffi-dev
 shared-mime-info
 mupdf
 mupdf-tools
-swig 
+swig
+libmupdf-dev
+libssl-dev
+libxml2-dev
+libxslt1-dev
+libzbar0
+libgl1-mesa-glx
+libglib2.0-0 

@@ -30,6 +30,13 @@ tiktoken>=0.4.0
 tqdm>=4.60.0
 colorlog>=6.7.0
 
+# Additional dependencies for system compatibility
+cffi>=1.15.0
+cryptography>=41.0.0
+pycparser>=2.21
+setuptools>=65.5.1
+wheel>=0.38.4
+
 # These dependencies are not required for Streamlit Cloud
 # but included here for documentation
 # fastapi>=0.95.0

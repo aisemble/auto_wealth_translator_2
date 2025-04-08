@@ -3,18 +3,30 @@ deepl>=1.15.0
 python-docx>=0.8.11
 PyPDF2>=3.0.0
 python-magic>=0.4.24
-PyMuPDF>=1.20.0,<1.22.0
+
+# Use specific versions with wheels available for problematic packages
+Pillow==9.5.0  # Pin to a version with pre-built wheels
+PyMuPDF==1.21.1  # Pin to a specific version with wheels
+
+# Other PDF Processing
 pdfplumber>=0.7.0,<0.8.0
 pdf2image>=1.16.0
 reportlab>=3.6.0
 WeasyPrint>=54.0
+
+# OCR
 pytesseract>=0.3.8
 opencv-python-headless>=4.6.0
+
+# Image and Chart Processing
 numpy>=1.21.0,<2.0.0
 matplotlib>=3.5.0
-Pillow>=9.0.0,<10.0.0
+
+# Translation and NLP
 openai>=1.0.0
 tiktoken>=0.4.0
+
+# Utilities
 tqdm>=4.60.0
 colorlog>=6.7.0
 

@@ -18,6 +18,7 @@ Before deploying to Streamlit Cloud, make sure you have:
 Ensure your repository contains the following key files:
 - `streamlit_cloud.py` (main entry point for Streamlit Cloud)
 - `requirements-streamlit.txt` (dependencies for Streamlit)
+- `packages.txt` (system dependencies for Streamlit Cloud)
 - `.streamlit/config.toml` (Streamlit configuration)
 
 ## Step 2: Set Up Streamlit Cloud
@@ -50,7 +51,19 @@ api_key = "your-deepl-api-key"
 api_key = "your-xai-api-key"
 ```
 
-## Step 4: Advanced Settings (Optional)
+## Step 4: System Dependencies
+
+AutoWealthTranslate relies on several system dependencies that are installed automatically via the `packages.txt` file:
+
+- **PDF processing**: zlib, libjpeg, libopenjp2, poppler-utils
+- **Image processing**: libwebp, libtiff
+- **Text rendering**: libharfbuzz, libfribidi, libpango
+- **OCR**: tesseract-ocr
+- **UI**: libcairo2, libpango, libgdk-pixbuf
+
+If you need to add custom system dependencies, you can modify the `packages.txt` file.
+
+## Step 5: Advanced Settings (Optional)
 
 For larger documents or more complex processing, you may need to adjust the app resources:
 
@@ -58,7 +71,7 @@ For larger documents or more complex processing, you may need to adjust the app 
 2. Increase the memory limit if needed (recommend at least 2GB)
 3. Enable "Persistent file storage" if you need to save files between sessions
 
-## Step 5: Deploy and Test
+## Step 6: Deploy and Test
 
 1. Click "Deploy" in Streamlit Cloud
 2. Wait for the build and deployment process to complete
@@ -71,21 +84,27 @@ For larger documents or more complex processing, you may need to adjust the app 
 
 If you encounter issues during deployment:
 
-1. **Dependencies not installing**: Check `requirements-streamlit.txt` for compatibility issues
-   - Some packages may need to be pinned to specific versions
-   - Try using `opencv-python-headless` instead of `opencv-python`
+1. **Build errors for Python packages**: 
+   - Check the app logs for specific error messages
+   - We've pinned PyMuPDF and Pillow to specific versions with pre-built wheels
+   - If you still have issues, you may need to add additional system dependencies to `packages.txt`
 
-2. **Memory errors**: Large documents may require more memory
+2. **Missing system dependencies**:
+   - If you see errors about missing libraries, add them to `packages.txt`
+   - For detailed debugging, check the Streamlit Cloud build logs
+   - Common missing dependencies include zlib1g-dev for Pillow and poppler-utils for pdf2image
+
+3. **Memory errors**: Large documents may require more memory
    - Upgrade to a higher tier in Streamlit Cloud
    - Add pagination or file size limits in your app
 
-3. **Missing API keys**: Verify your secrets are configured correctly
+4. **Missing API keys**: Verify your secrets are configured correctly
    - Check Streamlit Cloud logs for any key errors
    - Verify the secrets format matches what your code expects
 
-4. **OCR issues**: Tesseract may need additional configuration
-   - Provide explicit path configuration in your code
-   - Use cloud OCR services as an alternative
+5. **OCR issues**: Tesseract might need configuration
+   - Set the tesseract path in your code
+   - Example: `pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'`
 
 ## Performance Optimization
 
@@ -101,4 +120,5 @@ To improve performance on Streamlit Cloud:
 
 - [Streamlit Documentation](https://docs.streamlit.io/)
 - [Streamlit Secrets Management](https://docs.streamlit.io/streamlit-community-cloud/get-started/deploy-an-app/connect-to-data-sources/secrets-management)
-- [Streamlit Caching](https://docs.streamlit.io/library/advanced-features/caching) 
+- [Streamlit Caching](https://docs.streamlit.io/library/advanced-features/caching)
+- [Streamlit App with System Dependencies](https://docs.streamlit.io/streamlit-community-cloud/get-started/deploy-an-app/app-dependencies) 

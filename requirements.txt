@@ -12,7 +12,7 @@ python-magic>=0.4.24
 python-magic-bin>=0.4.14; sys_platform == 'win32'
 
 # PDF Processing
-PyMuPDF>=1.20.0,<1.22.0
+PyMuPDF==1.21.1
 pdfplumber>=0.7.0,<0.8.0
 pdf2image>=1.16.0
 reportlab>=3.6.0
@@ -25,7 +25,7 @@ opencv-python-headless>=4.6.0
 # Image and Chart Processing
 numpy>=1.21.0,<2.0.0
 matplotlib>=3.5.0
-Pillow>=9.0.0,<10.0.0
+Pillow==9.5.0
 
 # Translation and NLP
 langchain>=0.0.235

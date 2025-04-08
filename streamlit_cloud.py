@@ -8,6 +8,7 @@ import streamlit as st
 import os
 import logging
 import time
+import sys
 from importlib import import_module
 
 # Configure basic logging
@@ -37,6 +38,24 @@ def setup_environment():
             os.environ["XAI_API_KEY"] = st.secrets["xai"]["api_key"]
             logger.info("xAI API key configured from Streamlit secrets")
     
+    # Configure Tesseract for OCR
+    try:
+        import pytesseract
+        # Set Tesseract path for Linux environments (like Streamlit Cloud)
+        if os.path.exists('/usr/bin/tesseract'):
+            pytesseract.pytesseract.tesseract_cmd = r'/usr/bin/tesseract'
+            logger.info("Tesseract OCR path configured")
+        else:
+            logger.warning("Tesseract OCR not found at expected path")
+    except ImportError:
+        logger.warning("pytesseract module not found, OCR functionality may be limited")
+    
+    # Configure other system dependencies
+    os.environ["PYTHONIOENCODING"] = "utf-8"  # Ensure proper encoding
+    
+    # For WeasyPrint and Cairo
+    os.environ["PANGOCAIRO_BACKEND"] = "fontconfig"
+    
     # Create temporary directories if needed
     temp_dirs = [
         "temp_uploads",
@@ -47,6 +66,10 @@ def setup_environment():
     for dir_name in temp_dirs:
         os.makedirs(dir_name, exist_ok=True)
         logger.info(f"Created temporary directory: {dir_name}")
+    
+    # Log platform and Python version information
+    logger.info(f"Python version: {sys.version}")
+    logger.info(f"Platform: {sys.platform}")
 
 # Set page configuration
 def configure_page():

@@ -5,7 +5,7 @@ PyPDF2>=3.0.0
 python-magic>=0.4.24
 
 # Use specific versions with wheels available for problematic packages
-Pillow==9.5.0  # Pin to a version with pre-built wheels
+Pillow>=10.2.0  # Updated to latest version with Python 3.13 support
 PyMuPDF==1.23.3  # Updated to a version with Python 3.12 wheels
 
 # Other PDF Processing

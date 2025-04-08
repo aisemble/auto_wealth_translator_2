@@ -1,0 +1,75 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Streamlit
+.streamlit/secrets.toml
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+temp_*/
+temp_uploads/
+temp_output/
+temp_images/
+*.tmp
+*.log
+
+# API Keys and sensitive information
+*.pem
+*.key
+credentials.json
+
+# Translated documents
+*_translated.*
+*_zh.*
+*_fr.*
+*_es.*
+*_de.*
+*_ja.*
+*_ko.*
+*_ru.*
+*_ar.*
+*_it.*
+*_pt.* 

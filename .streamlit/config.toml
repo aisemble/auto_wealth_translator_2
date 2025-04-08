@@ -1,0 +1,21 @@
+[theme]
+primaryColor="#0078D7"
+backgroundColor="#FFFFFF"
+secondaryBackgroundColor="#F5F5F5"
+textColor="#333333"
+font="sans serif"
+
+[server]
+enableCORS=true
+enableXsrfProtection=true
+maxUploadSize=200
+headless=true
+
+[browser]
+gatherUsageStats=false
+
+[logger]
+level="info"
+
+[client]
+toolbarMode="minimal" 

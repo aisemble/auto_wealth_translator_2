@@ -23,7 +23,7 @@ numpy>=1.21.0,<2.0.0
 matplotlib>=3.5.0
 
 # Translation and NLP
-openai>=1.0.0
+openai>=1.0.0  # Required for GPT-4o and Grok API access
 tiktoken>=0.4.0
 
 # Utilities

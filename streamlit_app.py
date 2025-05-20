@@ -57,20 +57,8 @@ SUPPORTED_LANGUAGES = {
     "pt": "Portuguese (Português)"
 }
 
-# Translation models - only keep DeepL
-TRANSLATION_MODELS = {
-    "deepl": "Document Translation"
-}
-
-# PDF processing modes - only keep DeepL
-PDF_PROCESSING_MODES = {
-    "deepl": "Document Translation"
-}
-
-# More detailed descriptions for each mode - remove DeepL explanation
-PDF_MODE_DESCRIPTIONS = {
-    "deepl": ""
-}
+# Translation service configuration
+TRANSLATION_SERVICE = "Document Translation"
 
 def create_temp_dir():
     """Create a temporary directory for file processing."""
@@ -88,7 +76,7 @@ def get_file_download_link(file_path, link_text):
     href = f'<a href="data:{mime_type};base64,{b64}" download="{filename}">{link_text}</a>'
     return href
 
-def translate_document(input_file, source_lang, target_lang, model="deepl", api_key=None, pdf_mode="deepl", xai_api_key=None, deepl_api_key=None, gpt4o_key=None):
+def translate_document(input_file, source_lang, target_lang, api_key=None):
     """
     Process and translate a document.
     
@@ -96,28 +84,13 @@ def translate_document(input_file, source_lang, target_lang, model="deepl", api_
         input_file: Path to input file
         source_lang: Source language code
         target_lang: Target language code
-        model: Translation model to use
-        api_key: OpenAI API key
-        pdf_mode: PDF processing mode
-        xai_api_key: xAI API key for Grok models
-        deepl_api_key: DeepL API key for DeepL translation
-        gpt4o_key: API key for GPT-4o summary generation
+        api_key: API key for translation service
     
     Returns:
         Path to translated file, validation results, markdown content (if markdown mode), summary
     """
-    # Set API keys if provided
-    if api_key and model.startswith("gpt"):
-        os.environ["OPENAI_API_KEY"] = api_key
-    
-    if xai_api_key and model.startswith("grok"):
-        os.environ["XAI_API_KEY"] = xai_api_key
-        
-    if deepl_api_key:
-        os.environ["DEEPL_API_KEY"] = deepl_api_key
-        
-    if gpt4o_key:
-        os.environ["OPENAI_API_KEY"] = gpt4o_key
+    if api_key:
+        os.environ["DEEPL_API_KEY"] = api_key
     
     temp_dir = create_temp_dir()
     
@@ -126,23 +99,23 @@ def translate_document(input_file, source_lang, target_lang, model="deepl", api_
     unique_id = str(uuid.uuid4())[:8]
     output_path = temp_dir / f"{input_path.stem}_{target_lang}_{unique_id}{input_path.suffix}"
     
-    # Initialize DeepL translator
-    logger.info(f"Using DeepL API for document translation from {source_lang} to {target_lang}")
+    # Initialize translator
+    logger.info(f"Translating document from {source_lang} to {target_lang}")
     
-    deepl_translator = DeepLTranslationService(
+    translator = DeepLTranslationService(
         source_lang=source_lang, 
         target_lang=target_lang,
-        api_key=deepl_api_key
+        api_key=api_key
     )
     
-    if not deepl_translator.is_ready():
-        raise Exception("DeepL translator is not initialized. Please check your API key.")
+    if not translator.is_ready():
+        raise Exception("Translation service is not initialized. Please check your API key.")
     
     # Translate document
-    translated_file, metadata = deepl_translator.translate_document(input_file)
+    translated_file, metadata = translator.translate_document(input_file)
     
     if not translated_file:
-        error_message = metadata.get("error", "Unknown error during DeepL translation")
+        error_message = metadata.get("error", "Unknown error during translation")
         raise Exception(f"Translation failed: {error_message}")
     
     # Create validation result
@@ -152,15 +125,14 @@ def translate_document(input_file, source_lang, target_lang, model="deepl", api_
         "metadata": metadata
     }
     
-    # Generate summary using GPT-4o or Grok3
-    summary = generate_document_summary(translated_file, target_lang, gpt4o_key, xai_api_key)
+    # Generate summary
+    summary = generate_document_summary(translated_file, target_lang)
     
     # Return the translated file path, validation results, and summary
     return translated_file, validation_result, None, summary
 
-def generate_document_summary(file_path, language, openai_key=None, xai_key=None):
-    """Generate a summary of the translated document using GPT-4o or Grok3."""
-    import openai
+def generate_document_summary(file_path, language):
+    """Generate a summary of the translated document."""
     from pathlib import Path
     import os
     
@@ -218,194 +190,84 @@ Document content:
 
 Summary:"""
         
-        # Try to use GPT-4o first
-        if openai_key:
-            try:
-                client = openai.OpenAI(api_key=openai_key)
-                response = client.chat.completions.create(
-                    model="gpt-4o",
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=500,
-                    temperature=0.3
-                )
-                return response.choices[0].message.content.strip()
-            except Exception as e:
-                logger.error(f"Error generating summary with GPT-4o: {str(e)}")
-                # Fall back to Grok3 if available
+        return "Summary generation is currently disabled."
         
-        # Try Grok3 if GPT-4o failed or was not available
-        if xai_key:
-            try:
-                client = openai.OpenAI(
-                    api_key=xai_key,
-                    base_url="https://api.x.ai/v1"
-                )
-                response = client.chat.completions.create(
-                    model="grok-3",  # Use Grok3 if available
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=500,
-                    temperature=0.3
-                )
-                return response.choices[0].message.content.strip()
-            except Exception as e:
-                logger.error(f"Error generating summary with Grok3: {str(e)}")
-                
-        return "Unable to generate summary. Please check API keys."
-    
     except Exception as e:
-        logger.error(f"Error during summary generation: {str(e)}")
-        return f"Error generating summary: {str(e)}"
+        logger.error(f"Error generating summary: {str(e)}")
+        return "Error generating summary."
 
 def main():
     st.set_page_config(
         page_title="AutoWealthTranslate",
-        page_icon="📊",
-        layout="wide",
-        initial_sidebar_state="expanded"
+        page_icon="🌐",
+        layout="wide"
     )
     
-    # Logo and title
-    st.sidebar.image("https://i.imgur.com/ddr4OWY.png", width=100)
-    st.sidebar.title("AutoWealthTranslate")
-    st.sidebar.markdown("*Translate financial documents with accurate terminology and preserved formatting*")
+    st.title("AutoWealthTranslate")
+    st.markdown("Translate financial documents while preserving formatting and structure.")
     
-    # API Keys section in the sidebar
-    with st.sidebar.expander("API Keys (Required for Translation)", expanded=False):
-        deepl_key = st.text_input("DeepL API Key (for translations)", type="password")
-        gpt4o_key = st.text_input("OpenAI API Key (for summary generation)", type="password")
-        xai_key = st.text_input("xAI API Key (alternative for summary generation)", type="password")
-        
-        st.markdown("""
-        **Note on API Keys:**
-        - DeepL key is required for document translation
-        - OpenAI key is used for document summary generation with GPT-4o
-        - xAI key is an alternative for summary generation with Grok3
-        """)
+    # Sidebar
+    st.sidebar.header("Settings")
     
-    # Main content
-    st.title("Financial Document Translation")
-    st.markdown("### Automatically translate wealth plan reports while preserving formatting")
-    
-    # Main area - File upload
-    st.header("Upload Document")
-    
-    uploaded_file = st.file_uploader(
-        "Upload a PDF or Word document",
-        type=["pdf", "docx"],
-        help="Maximum file size: 200MB"
+    # Language selection
+    source_lang = st.sidebar.selectbox(
+        "Source Language",
+        options=list(SUPPORTED_LANGUAGES.keys()),
+        format_func=lambda x: SUPPORTED_LANGUAGES[x],
+        index=0
     )
     
-    # Translation settings
-    col1, col2 = st.columns(2)
+    target_lang = st.sidebar.selectbox(
+        "Target Language",
+        options=list(SUPPORTED_LANGUAGES.keys()),
+        format_func=lambda x: SUPPORTED_LANGUAGES[x],
+        index=1
+    )
     
-    with col1:
-        source_language = st.selectbox(
-            "Source Language",
-            options=list(SUPPORTED_LANGUAGES.keys()),
-            format_func=lambda x: SUPPORTED_LANGUAGES[x],
-            index=0,  # Default to English
-            help="The language of the document you're uploading"
-        )
+    # API key input
+    api_key = st.sidebar.text_input("API Key", type="password")
     
-    with col2:
-        target_language = st.selectbox(
-            "Target Language",
-            options=list(SUPPORTED_LANGUAGES.keys()),
-            format_func=lambda x: SUPPORTED_LANGUAGES[x],
-            index=1,  # Default to Chinese
-            help="The language to translate the document into"
-        )
+    # File upload
+    uploaded_file = st.file_uploader("Upload Document", type=["pdf", "docx"])
     
-    # Process button
-    if st.button("Translate Document"):
-        # Check for required API key
-        if not deepl_key:
-            st.error("DeepL API Key is required for translation. Please enter it in the sidebar.")
-            st.stop()
-        
-        # Save uploaded file to temp location
+    if uploaded_file is not None:
+        # Save uploaded file
         temp_dir = create_temp_dir()
-        temp_file_path = temp_dir / uploaded_file.name
+        input_path = temp_dir / uploaded_file.name
+        with open(input_path, "wb") as f:
+            f.write(uploaded_file.getvalue())
         
-        with open(temp_file_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        
-        # Show progress
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        try:
-            # Update progress
-            status_text.text("Starting translation...")
-            progress_bar.progress(10)
-            
-            # Translate document
-            status_text.text("Translating document...")
-            progress_bar.progress(30)
-            
-            # Set PDF mode to deepl
-            pdf_mode = "deepl"
-            model = "deepl"
-            
-            translated_file, validation_results, _, summary = translate_document(
-                str(temp_file_path),
-                source_language,
-                target_language,
-                model=model,
-                pdf_mode=pdf_mode,
-                deepl_api_key=deepl_key,
-                gpt4o_key=gpt4o_key,
-                xai_api_key=xai_key
-            )
-            
-            progress_bar.progress(90)
-            status_text.text("Finalizing translation...")
-            
-            # Complete progress
-            progress_bar.progress(100)
-            status_text.text("Translation complete!")
-            
-            # Display summary if available
-            if summary:
-                st.subheader("Document Summary")
-                st.write(summary)
-            
-            # Display download link
-            st.subheader("Download Translated Document")
-            
-            # Get file extension
-            file_ext = Path(translated_file).suffix.lower()
-            
-            if file_ext == '.pdf':
-                file_type = "PDF"
-            elif file_ext == '.docx':
-                file_type = "Word"
-            else:
-                file_type = "Document"
+        # Translation button
+        if st.button("Translate"):
+            try:
+                with st.spinner("Translating document..."):
+                    translated_file, validation, _, summary = translate_document(
+                        input_path,
+                        source_lang,
+                        target_lang,
+                        api_key
+                    )
                 
-            st.markdown(
-                get_file_download_link(translated_file, f"Download Translated {file_type}"),
-                unsafe_allow_html=True
-            )
-            
-            # Add translation details and quality score
-            st.subheader("Translation Details")
-            st.write(f"Quality Score: {validation_results['score']}/10")
-            
-            # Display metadata
-            metadata = validation_results.get("metadata", {})
-            if metadata:
-                st.write("**Translation Metadata:**")
-                for key, value in metadata.items():
-                    if key not in ["error", "success"]:
-                        st.write(f"- {key.replace('_', ' ').title()}: {value}")
-        
-        except Exception as e:
-            progress_bar.progress(100)
-            status_text.empty()
-            st.error(f"Error during translation: {str(e)}")
-            st.write("Please check your API keys and try again.")
-            logger.error(f"Error during translation: {str(e)}", exc_info=True)
+                # Display results
+                st.success("Translation completed!")
+                
+                # Download link
+                st.markdown(
+                    get_file_download_link(translated_file, "Download Translated Document"),
+                    unsafe_allow_html=True
+                )
+                
+                # Display summary if available
+                if summary:
+                    st.subheader("Document Summary")
+                    st.write(summary)
+                
+            except Exception as e:
+                st.error(f"Error during translation: {str(e)}")
+    
+    # Footer
+    st.markdown("---")
+    st.markdown("© 2024 AutoWealthTranslate")
 
 if __name__ == "__main__":
     main() 

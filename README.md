@@ -62,7 +62,7 @@ doc_processor = DocumentProcessor("report.pdf")
 doc_components = doc_processor.process()
 
 # Translate components
-translation_service = TranslationService(target_lang="fr", model="gpt-4")
+translation_service = TranslationService(target_lang="fr")
 translated_components = translation_service.translate(doc_components)
 
 # Rebuild document

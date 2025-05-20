@@ -15,6 +15,8 @@ import uuid
 import base64
 import io
 import re
+import json
+from openai import OpenAI
 
 from auto_wealth_translate.core.document_processor import DocumentProcessor
 from auto_wealth_translate.core.translator import TranslationService
@@ -196,6 +198,120 @@ Summary:"""
         logger.error(f"Error generating summary: {str(e)}")
         return "Error generating summary."
 
+def perform_qa_comparison(original_file, translated_file, openai_api_key, source_lang, target_lang):
+    """
+    Use OpenAI to compare original and translated documents for quality assessment.
+    
+    Args:
+        original_file: Path to the original file
+        translated_file: Path to the translated file
+        openai_api_key: OpenAI API key
+        source_lang: Source language code
+        target_lang: Target language code
+        
+    Returns:
+        QA analysis results as a dictionary
+    """
+    if not openai_api_key:
+        return {"error": "OpenAI API key is required for QA analysis"}
+    
+    # Extract text from both documents
+    original_text = extract_text_from_document(original_file)
+    translated_text = extract_text_from_document(translated_file)
+    
+    if not original_text or not translated_text:
+        return {"error": "Failed to extract text from documents"}
+    
+    try:
+        # Initialize OpenAI client
+        client = OpenAI(api_key=openai_api_key)
+        
+        # Create prompt for comparison
+        prompt = f"""
+        You are a professional translation quality assessor with expertise in financial documents.
+        
+        TASK: Compare the original document in {source_lang} with the translated document in {target_lang}, 
+        then provide a detailed quality assessment.
+        
+        Original Document ({source_lang}):
+        {original_text[:10000]}  # Limit text length
+        
+        Translated Document ({target_lang}):
+        {translated_text[:10000]}  # Limit text length
+        
+        Please assess:
+        1. Accuracy: How accurately is the meaning conveyed?
+        2. Terminology: Are financial terms correctly translated?
+        3. Style: Is the translation appropriate for financial documents?
+        4. Formatting: Are key structures preserved?
+        5. Overall quality: Rate from 1-10
+        
+        Provide specific examples of both good translations and any errors or issues found.
+        """
+        
+        # Call OpenAI API
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are a financial translation quality expert."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2,
+            max_tokens=2000
+        )
+        
+        analysis = response.choices[0].message.content
+        
+        # Parse the analysis for structured output
+        qa_result = {
+            "full_analysis": analysis,
+            "summary": analysis[:500] + "..." if len(analysis) > 500 else analysis,
+            "timestamp": time.strftime("%Y-%m-%d %H:%M:%S")
+        }
+        
+        return qa_result
+        
+    except Exception as e:
+        logger.error(f"Error during QA analysis: {str(e)}")
+        return {"error": f"QA analysis failed: {str(e)}"}
+
+def extract_text_from_document(file_path):
+    """Extract text content from PDF or DOCX file."""
+    file_path = Path(file_path)
+    file_ext = file_path.suffix.lower()
+    
+    extracted_text = ""
+    
+    try:
+        if file_ext == '.pdf':
+            # For PDF files
+            import PyPDF2
+            with open(file_path, 'rb') as file:
+                reader = PyPDF2.PdfReader(file)
+                for page in reader.pages:
+                    extracted_text += page.extract_text() + "\n\n"
+        elif file_ext == '.docx':
+            # For DOCX files
+            import docx
+            doc = docx.Document(file_path)
+            for para in doc.paragraphs:
+                extracted_text += para.text + "\n"
+            
+            # Also get text from tables
+            for table in doc.tables:
+                for row in table.rows:
+                    for cell in row.cells:
+                        extracted_text += cell.text + " | "
+                    extracted_text += "\n"
+        else:
+            return None
+            
+        return extracted_text
+        
+    except Exception as e:
+        logger.error(f"Error extracting text: {str(e)}")
+        return None
+
 def main():
     st.set_page_config(
         page_title="AutoWealthTranslate",
@@ -224,8 +340,19 @@ def main():
         index=1
     )
     
-    # API key input
-    api_key = st.sidebar.text_input("API Key", type="password")
+    # API key inputs
+    translation_api_key = st.sidebar.text_input("Translation API Key", type="password")
+    
+    # Optional QA section
+    st.sidebar.markdown("---")
+    enable_qa = st.sidebar.checkbox("Enable Translation QA", value=False, 
+                               help="Use AI to analyze translation quality (requires OpenAI API key)")
+    
+    if enable_qa:
+        openai_api_key = st.sidebar.text_input("OpenAI API Key", type="password",
+                                      help="Required for translation quality assessment")
+    else:
+        openai_api_key = None
     
     # File upload
     uploaded_file = st.file_uploader("Upload Document", type=["pdf", "docx"])
@@ -245,7 +372,7 @@ def main():
                         input_path,
                         source_lang,
                         target_lang,
-                        api_key
+                        translation_api_key
                     )
                 
                 # Display results
@@ -256,6 +383,29 @@ def main():
                     get_file_download_link(translated_file, "Download Translated Document"),
                     unsafe_allow_html=True
                 )
+                
+                # Perform QA analysis if enabled
+                if enable_qa and openai_api_key:
+                    with st.spinner("Performing translation quality assessment..."):
+                        qa_results = perform_qa_comparison(
+                            input_path, 
+                            translated_file, 
+                            openai_api_key,
+                            source_lang,
+                            target_lang
+                        )
+                    
+                    # Display QA results
+                    if "error" in qa_results:
+                        st.error(f"QA analysis error: {qa_results['error']}")
+                    else:
+                        st.subheader("Translation Quality Assessment")
+                        
+                        with st.expander("View QA Summary"):
+                            st.write(qa_results["summary"])
+                        
+                        with st.expander("View Full Analysis"):
+                            st.write(qa_results["full_analysis"])
                 
                 # Display summary if available
                 if summary:
